@@ -66,15 +66,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getConversations(userId: string): Promise<ConversationWithUsers[]> {
-    const result = await db
+    // First get all conversations for the user
+    const userConversations = await db
       .select()
       .from(conversations)
-      .leftJoin(users, eq(conversations.participant1Id, users.id))
-      .leftJoin(
-        users,
-        eq(conversations.participant2Id, users.id)
-      )
-      .leftJoin(messages, eq(conversations.id, messages.conversationId))
       .where(
         or(
           eq(conversations.participant1Id, userId),
@@ -83,24 +78,37 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(conversations.lastMessageAt));
 
-    // Transform the result to include users and latest message
-    const conversationMap = new Map<number, ConversationWithUsers>();
-    
-    for (const row of result) {
-      const conversation = row.conversations;
-      if (!conversation) continue;
+    const result: ConversationWithUsers[] = [];
 
-      if (!conversationMap.has(conversation.id)) {
-        conversationMap.set(conversation.id, {
-          ...conversation,
-          participant1: {} as User,
-          participant2: {} as User,
-          messages: [],
-        });
-      }
+    for (const conversation of userConversations) {
+      // Get participant details
+      const [participant1] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, conversation.participant1Id));
+
+      const [participant2] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, conversation.participant2Id));
+
+      // Get latest messages for this conversation
+      const latestMessages = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.conversationId, conversation.id))
+        .orderBy(desc(messages.createdAt))
+        .limit(1);
+
+      result.push({
+        ...conversation,
+        participant1: participant1 || {} as User,
+        participant2: participant2 || {} as User,
+        messages: latestMessages,
+      });
     }
 
-    return Array.from(conversationMap.values());
+    return result;
   }
 
   async getOrCreateConversation(participant1Id: string, participant2Id: string): Promise<Conversation> {

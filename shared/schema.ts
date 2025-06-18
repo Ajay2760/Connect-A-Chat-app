@@ -49,7 +49,7 @@ export const messages = pgTable("messages", {
   conversationId: serial("conversation_id").notNull().references(() => conversations.id),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   content: text("content").notNull(),
-  messageType: varchar("message_type").default("text"), // text, file, image
+  messageType: varchar("message_type").default("text"),
   fileUrl: varchar("file_url"),
   fileName: varchar("file_name"),
   isRead: boolean("is_read").default(false),

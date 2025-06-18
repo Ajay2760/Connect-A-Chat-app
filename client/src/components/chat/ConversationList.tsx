@@ -5,6 +5,7 @@ import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { MessageCircle } from "lucide-react";
 
 export function ConversationList() {
   const { user } = useAuth();

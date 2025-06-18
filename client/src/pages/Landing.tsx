@@ -66,21 +66,7 @@ export default function Landing() {
           </Card>
         </div>
 
-        {/* Demo Preview */}
-        <div className="max-w-4xl mx-auto">
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <div className="bg-muted/50 p-8 text-center">
-                <div className="w-full h-64 bg-background/50 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-                  <div className="text-center">
-                    <MessageCircle className="mx-auto mb-4 text-muted-foreground" size={48} />
-                    <p className="text-muted-foreground">Beautiful chat interface preview</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+
 
         {/* Call to Action */}
         <div className="text-center mt-16">
