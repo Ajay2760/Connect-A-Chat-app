@@ -106,11 +106,46 @@ Connect is a real-time chat application built with a React frontend, Express bac
 - WebSocket connection management with user mapping
 - Static asset optimization and caching headers
 
+## Essential Chat Features
+
+### Core Messaging
+- **Real-time messaging** with instant delivery via WebSocket
+- **Message status indicators** showing sent/delivered/read states
+- **Typing indicators** showing when users are composing messages
+- **Message timestamps** with relative and absolute time display
+
+### User Experience
+- **Professional emoji picker** with categorized emoji selection
+- **User search and discovery** to start new conversations
+- **Online status tracking** with real-time presence indicators
+- **Responsive design** optimized for desktop and mobile
+
+### Authentication & Security
+- **Secure authentication** via Replit OAuth with session management
+- **Protected routes** ensuring only authenticated users access chat
+- **User profile integration** with avatars and display names
+- **Automatic session refresh** for seamless user experience
+
+### Interface Components
+- **Clean sidebar** with conversation list and user profile
+- **Message bubbles** with distinct styling for sent/received messages
+- **Search functionality** for finding and starting conversations
+- **Theme switching** between light and dark modes
+- **Professional landing page** for unauthenticated users
+
 ## Changelog
 
 ```
 Changelog:
-- June 18, 2025. Initial setup
+- June 18, 2025. Initial setup and core architecture
+- June 18, 2025. Added essential chat features:
+  * User search dialog for starting conversations
+  * Professional emoji picker with categories
+  * Message status indicators
+  * Real-time typing indicators
+  * Online presence tracking
+  * Removed landing page preview section
+  * Enhanced message input with emoji support
 ```
 
 ## User Preferences

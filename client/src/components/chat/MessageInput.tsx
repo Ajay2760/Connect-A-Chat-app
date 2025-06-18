@@ -2,16 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useChat } from "@/hooks/useChat";
-import { Paperclip, Send, Smile } from "lucide-react";
+import { EmojiPicker } from "./EmojiPicker";
+import { Paperclip, Send } from "lucide-react";
 
 export function MessageInput() {
   const [message, setMessage] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { sendMessage, sendTypingIndicator, isLoading } = useChat();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
-
-  const emojis = ["😀", "😂", "😍", "🤔", "👍", "❤️", "🎉", "🚀"];
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -73,7 +71,6 @@ export function MessageInput() {
         textarea.setSelectionRange(start + emoji.length, start + emoji.length);
       }, 0);
     }
-    setShowEmojiPicker(false);
   };
 
   return (
@@ -100,15 +97,9 @@ export function MessageInput() {
               rows={1}
             />
             
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="absolute right-2 bottom-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-            >
-              <Smile className="h-4 w-4" />
-            </Button>
+            <div className="absolute right-2 bottom-2">
+              <EmojiPicker onEmojiSelect={insertEmoji} />
+            </div>
           </div>
           
           <Button
@@ -120,25 +111,6 @@ export function MessageInput() {
           </Button>
         </div>
       </form>
-
-      {/* Emoji Picker */}
-      {showEmojiPicker && (
-        <div className="absolute bottom-20 right-4 bg-background border border-border rounded-lg shadow-lg p-4 z-50">
-          <div className="grid grid-cols-8 gap-2">
-            {emojis.map((emoji) => (
-              <Button
-                key={emoji}
-                variant="ghost"
-                size="sm"
-                onClick={() => insertEmoji(emoji)}
-                className="text-xl hover:bg-accent rounded p-1 h-8 w-8"
-              >
-                {emoji}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
