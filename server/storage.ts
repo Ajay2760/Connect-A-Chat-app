@@ -191,18 +191,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(
-        and(
-          or(
-            eq(users.firstName, query),
-            eq(users.lastName, query),
-            eq(users.email, query)
-          ),
-          eq(users.id, currentUserId)
+        or(
+          eq(users.firstName, query),
+          eq(users.lastName, query),
+          eq(users.email, query)
         )
       )
       .limit(10);
 
-    return result;
+    return result.filter(user => user.id !== currentUserId);
   }
 }
 

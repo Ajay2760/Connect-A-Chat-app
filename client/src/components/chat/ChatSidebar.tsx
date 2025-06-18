@@ -2,6 +2,7 @@ import { MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ConversationList } from "./ConversationList";
+import { UserSearchDialog } from "./UserSearchDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,10 @@ export function ChatSidebar() {
             </div>
             <h1 className="text-xl font-bold text-foreground">Connect</h1>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center space-x-2">
+            <UserSearchDialog />
+            <ThemeToggle />
+          </div>
         </div>
         
         {/* Search Bar */}
