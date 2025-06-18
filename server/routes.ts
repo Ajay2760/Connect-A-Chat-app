@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { storage } from "./storage";
+import { storage } from "./memStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertMessageSchema, insertConversationSchema } from "@shared/schema";
 import { z } from "zod";
