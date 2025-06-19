@@ -6,6 +6,7 @@ import {
   jsonb,
   index,
   serial,
+  integer,
   boolean,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -52,7 +53,41 @@ export const messages = pgTable("messages", {
   messageType: varchar("message_type").default("text"),
   fileUrl: varchar("file_url"),
   fileName: varchar("file_name"),
+  fileSize: integer("file_size"),
   isRead: boolean("is_read").default(false),
+  reactions: jsonb("reactions").default('{}'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupChats = pgTable("group_chats", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  createdBy: varchar("created_by").notNull(),
+  avatar: varchar("avatar"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const groupMembers = pgTable("group_members", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groupChats.id),
+  userId: varchar("user_id").notNull(),
+  role: varchar("role").default("member"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const groupMessages = pgTable("group_messages", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groupChats.id),
+  senderId: varchar("sender_id").notNull(),
+  content: text("content").notNull(),
+  messageType: varchar("message_type").default("text"),
+  fileUrl: varchar("file_url"),
+  fileName: varchar("file_name"),
+  fileSize: integer("file_size"),
+  reactions: jsonb("reactions").default('{}'),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

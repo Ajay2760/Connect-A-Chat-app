@@ -22,6 +22,8 @@ export interface IStorage {
   getMessages(conversationId: number): Promise<MessageWithSender[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessagesAsRead(conversationId: number, userId: string): Promise<void>;
+  addMessageReaction(messageId: number, userId: string, emoji: string): Promise<void>;
+  removeMessageReaction(messageId: number, userId: string, emoji: string): Promise<void>;
   
   // Search operations
   searchUsers(query: string, currentUserId: string): Promise<User[]>;
@@ -144,7 +146,9 @@ export class MemoryStorage implements IStorage {
       messageType: messageData.messageType || null,
       fileUrl: messageData.fileUrl || null,
       fileName: messageData.fileName || null,
+      fileSize: messageData.fileSize || null,
       isRead: false,
+      reactions: {},
       createdAt: new Date(),
     };
 
@@ -169,6 +173,46 @@ export class MemoryStorage implements IStorage {
         msg.isRead = true;
         this.messages.set(msg.id, msg);
       });
+  }
+
+  async addMessageReaction(messageId: number, userId: string, emoji: string): Promise<void> {
+    const message = this.messages.get(messageId);
+    if (!message) return;
+
+    const reactions = message.reactions as Record<string, string[]> || {};
+
+    if (!reactions[emoji]) {
+      reactions[emoji] = [];
+    }
+
+    // Remove user from this emoji if already reacted
+    reactions[emoji] = reactions[emoji].filter((id: string) => id !== userId);
+    
+    // Add user to this emoji
+    reactions[emoji].push(userId);
+
+    // Clean up empty reactions
+    if (reactions[emoji].length === 0) {
+      delete reactions[emoji];
+    }
+
+    message.reactions = reactions;
+  }
+
+  async removeMessageReaction(messageId: number, userId: string, emoji: string): Promise<void> {
+    const message = this.messages.get(messageId);
+    if (!message) return;
+
+    const reactions = message.reactions as Record<string, string[]> || {};
+    if (!reactions[emoji]) return;
+
+    reactions[emoji] = reactions[emoji].filter((id: string) => id !== userId);
+    
+    if (reactions[emoji].length === 0) {
+      delete reactions[emoji];
+    }
+
+    message.reactions = reactions;
   }
 
   async searchUsers(query: string, currentUserId: string): Promise<User[]> {

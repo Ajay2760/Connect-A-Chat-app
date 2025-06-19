@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useChat } from "@/hooks/useChat";
 import { EmojiPicker } from "./EmojiPicker";
-import { Paperclip, Send } from "lucide-react";
+import { FileUpload } from "./FileUpload";
+import { Send } from "lucide-react";
 
 export function MessageInput() {
   const [message, setMessage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const { sendMessage, sendTypingIndicator, isLoading } = useChat();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -37,17 +40,56 @@ export function MessageInput() {
     }, 1000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() && !isLoading) {
-      sendMessage(message.trim());
-      setMessage("");
-      sendTypingIndicator(false);
-      
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+    
+    if ((message.trim() || selectedFile) && !isLoading) {
+      try {
+        if (selectedFile) {
+          // Convert file to base64 for simple transmission
+          const reader = new FileReader();
+          reader.onload = () => {
+            const fileData = {
+              content: message.trim() || `Shared ${selectedFile.type.startsWith('image/') ? 'image' : 'file'}: ${selectedFile.name}`,
+              messageType: selectedFile.type.startsWith('image/') ? 'image' : 'file',
+              fileUrl: reader.result as string,
+              fileName: selectedFile.name,
+              fileSize: selectedFile.size,
+            };
+            sendMessage(fileData.content, {
+              messageType: fileData.messageType,
+              fileUrl: fileData.fileUrl,
+              fileName: fileData.fileName,
+              fileSize: fileData.fileSize,
+            });
+          };
+          reader.readAsDataURL(selectedFile);
+        } else {
+          sendMessage(message.trim());
+        }
+        
+        setMessage("");
+        setSelectedFile(null);
+        setFilePreview(null);
+        sendTypingIndicator(false);
+        
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
       }
     }
+  };
+
+  const handleFileSelect = (file: File, preview: string | null) => {
+    setSelectedFile(file);
+    setFilePreview(preview);
+  };
+
+  const handleFileClear = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -76,15 +118,25 @@ export function MessageInput() {
   return (
     <div className="relative">
       <form onSubmit={handleSubmit} className="p-4 border-t border-border bg-background">
+        {/* File upload preview */}
+        {selectedFile && (
+          <div className="mb-3">
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              onClear={handleFileClear}
+              selectedFile={selectedFile}
+              preview={filePreview}
+            />
+          </div>
+        )}
+        
         <div className="flex items-end space-x-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Paperclip className="h-5 w-5" />
-          </Button>
+          <FileUpload
+            onFileSelect={handleFileSelect}
+            onClear={handleFileClear}
+            selectedFile={null}
+            preview={null}
+          />
           
           <div className="flex-1 relative">
             <Textarea

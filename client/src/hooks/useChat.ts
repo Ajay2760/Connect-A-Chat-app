@@ -26,10 +26,20 @@ export function useChat() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { conversationId: number; content: string; messageType?: string }) => {
+    mutationFn: async (data: { 
+      conversationId: number; 
+      content: string; 
+      messageType?: string;
+      fileUrl?: string;
+      fileName?: string;
+      fileSize?: number;
+    }) => {
       const response = await apiRequest("POST", `/api/conversations/${data.conversationId}/messages`, {
         content: data.content,
         messageType: data.messageType || "text",
+        fileUrl: data.fileUrl,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
       });
       return response.json();
     },
@@ -94,12 +104,20 @@ export function useChat() {
     };
   }, [subscribe, queryClient]);
 
-  const sendMessage = useCallback((content: string, messageType = "text") => {
+  const sendMessage = useCallback((content: string, fileData?: {
+    messageType: string;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+  }) => {
     if (!activeConversationId) return;
     sendMessageMutation.mutate({
       conversationId: activeConversationId,
       content,
-      messageType,
+      messageType: fileData?.messageType || "text",
+      fileUrl: fileData?.fileUrl,
+      fileName: fileData?.fileName,
+      fileSize: fileData?.fileSize,
     });
   }, [activeConversationId, sendMessageMutation]);
 
@@ -121,6 +139,15 @@ export function useChat() {
     markAsReadMutation.mutate(conversationId);
   }, [markAsReadMutation]);
 
+  const addReaction = useCallback(async (messageId: number, emoji: string) => {
+    try {
+      await apiRequest("POST", `/api/messages/${messageId}/reactions`, { emoji });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
+    } catch (error) {
+      console.error("Error adding reaction:", error);
+    }
+  }, [activeConversationId, queryClient]);
+
   return {
     conversations,
     conversationsLoading,
@@ -132,6 +159,7 @@ export function useChat() {
     startConversation,
     sendTypingIndicator,
     markAsRead,
+    addReaction,
     typingUsers: typingUsers.get(activeConversationId || 0) || new Set(),
     isLoading: sendMessageMutation.isPending || createConversationMutation.isPending,
   };

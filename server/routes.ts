@@ -149,6 +149,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Message reaction routes
+  app.post('/api/messages/:id/reactions', async (req: any, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const { emoji } = req.body;
+      const userId = req.session?.user?.id || 'guest';
+
+      if (isNaN(messageId) || !emoji) {
+        return res.status(400).json({ message: "Invalid message ID or emoji" });
+      }
+
+      await storage.addMessageReaction(messageId, userId, emoji);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error adding reaction:", error);
+      res.status(500).json({ message: "Failed to add reaction" });
+    }
+  });
+
+  app.delete('/api/messages/:id/reactions', async (req: any, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const { emoji } = req.body;
+      const userId = req.session?.user?.id || 'guest';
+
+      if (isNaN(messageId) || !emoji) {
+        return res.status(400).json({ message: "Invalid message ID or emoji" });
+      }
+
+      await storage.removeMessageReaction(messageId, userId, emoji);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing reaction:", error);
+      res.status(500).json({ message: "Failed to remove reaction" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server

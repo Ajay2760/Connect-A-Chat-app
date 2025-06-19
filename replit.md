@@ -110,28 +110,46 @@ Connect is a real-time chat application built with a React frontend, Express bac
 
 ### Core Messaging
 - **Real-time messaging** with instant delivery via WebSocket
+- **File and image sharing** with drag-and-drop upload support
+- **Message reactions** with emoji responses and reaction counts
 - **Message status indicators** showing sent/delivered/read states
 - **Typing indicators** showing when users are composing messages
 - **Message timestamps** with relative and absolute time display
+
+### File Sharing & Media
+- **Image preview** with full-size viewing and download options
+- **File attachments** supporting documents, PDFs, and archives
+- **File size limits** with automatic validation (10MB max)
+- **Thumbnail generation** for image files
+- **Download functionality** for all shared files
+
+### Interactive Features
+- **Message reactions** with popular emoji selection
+- **Reaction aggregation** showing user counts per emoji
+- **One-click emoji reactions** with toggle functionality
+- **Real-time reaction updates** via WebSocket
 
 ### User Experience
 - **Professional emoji picker** with categorized emoji selection
 - **User search and discovery** to start new conversations
 - **Online status tracking** with real-time presence indicators
 - **Responsive design** optimized for desktop and mobile
+- **Animated typing indicators** with visual feedback
 
 ### Authentication & Security
-- **Firebase authentication** with Google and Facebook social login
-- **Protected routes** ensuring only authenticated users access chat
-- **User profile integration** with avatars and display names from social accounts
-- **Simple session management** for easy deployment without database dependencies
+- **Guest user system** with name-based entry (no signup required)
+- **Automatic avatar generation** based on user names
+- **Simple session management** for easy deployment
+- **Zero external dependencies** for authentication
 
 ### Interface Components
 - **Clean sidebar** with conversation list and user profile
 - **Message bubbles** with distinct styling for sent/received messages
+- **File upload interface** with preview and progress indicators
+- **Reaction UI** with hover effects and user feedback
 - **Search functionality** for finding and starting conversations
 - **Theme switching** between light and dark modes
-- **Professional landing page** for unauthenticated users
+- **Professional landing page** for guest user entry
 
 ## Changelog
 
@@ -158,6 +176,15 @@ Changelog:
   * Added automatic avatar generation based on user names
   * Simplified server architecture without authentication middleware
   * Created deployment-ready application with zero dependencies
+- June 19, 2025. Advanced chat features implementation:
+  * File and image sharing with drag-and-drop upload support
+  * Message reactions with emoji responses and real-time updates
+  * Enhanced typing indicators with animated visual feedback
+  * File preview system with download functionality
+  * Support for multiple file formats (images, documents, PDFs)
+  * File size validation and error handling
+  * Reaction aggregation showing user counts per emoji
+  * Complete in-memory storage support for all new features
 ```
 
 ## User Preferences
