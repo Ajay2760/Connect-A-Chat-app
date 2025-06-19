@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./memStorage";
-import { setupAuth, isAuthenticated } from "./simpleAuth";
+import { setupAuth, isAuthenticated } from "./noAuth";
 import { insertMessageSchema, insertConversationSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -17,44 +17,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Guest user endpoint
+  app.post('/api/guest/join', async (req, res) => {
     try {
-      const sessionUser = req.user;
-      if (!sessionUser) {
-        return res.status(401).json({ message: "Unauthorized" });
+      const { user } = req.body;
+      if (!user || !user.id || !user.name) {
+        return res.status(400).json({ message: "Invalid user data" });
       }
-      
-      // Get or create user in storage
-      let user = await storage.getUser(sessionUser.uid);
-      if (!user) {
-        user = await storage.upsertUser({
-          id: sessionUser.uid,
-          email: sessionUser.email || null,
-          firstName: sessionUser.displayName?.split(' ')[0] || null,
-          lastName: sessionUser.displayName?.split(' ').slice(1).join(' ') || null,
-          profileImageUrl: sessionUser.photoURL || null,
-        });
-      }
-      
-      res.json(user);
+
+      // Store guest user
+      const guestUser = await storage.upsertUser({
+        id: user.id,
+        email: null,
+        firstName: user.name,
+        lastName: null,
+        profileImageUrl: user.avatar,
+      });
+
+      res.json({ success: true, user: guestUser });
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error("Error joining as guest:", error);
+      res.status(500).json({ message: "Failed to join chat" });
     }
   });
 
   // User routes
-  app.get('/api/users/search', isAuthenticated, async (req: any, res) => {
+  app.get('/api/users/search', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
       const { q } = req.query;
       
       if (!q || typeof q !== 'string') {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      const users = await storage.searchUsers(q, userId);
+      const users = await storage.searchUsers(q, 'guest');
       res.json(users);
     } catch (error) {
       console.error("Error searching users:", error);
@@ -63,24 +59,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Conversation routes
-  app.get('/api/conversations', isAuthenticated, async (req: any, res) => {
+  app.get('/api/conversations', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const conversations = await storage.getConversations(userId);
-      res.json(conversations);
+      // Return empty conversations for guest mode
+      res.json([]);
     } catch (error) {
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
     }
   });
 
-  app.post('/api/conversations', isAuthenticated, async (req: any, res) => {
+  app.post('/api/conversations', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
       const validatedData = insertConversationSchema.parse(req.body);
       
       const conversation = await storage.getOrCreateConversation(
-        userId,
+        'guest',
         validatedData.participant2Id
       );
       
@@ -95,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Message routes
-  app.get('/api/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+  app.get('/api/conversations/:id/messages', async (req: any, res) => {
     try {
       const conversationId = parseInt(req.params.id);
       if (isNaN(conversationId)) {
@@ -110,9 +104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/conversations/:id/messages', isAuthenticated, async (req: any, res) => {
+  app.post('/api/conversations/:id/messages', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
       const conversationId = parseInt(req.params.id);
       
       if (isNaN(conversationId)) {
@@ -122,13 +115,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertMessageSchema.parse({
         ...req.body,
         conversationId,
-        senderId: userId,
       });
 
       const message = await storage.createMessage(validatedData);
       
       // Broadcast message to connected clients
-      broadcastMessage(conversationId, message, userId);
+      broadcastMessage(conversationId, message, validatedData.senderId);
       
       res.json(message);
     } catch (error) {

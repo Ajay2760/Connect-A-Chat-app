@@ -1,92 +1,33 @@
 import { useEffect, useState } from "react";
-import { type User } from "firebase/auth";
-import { onAuthStateChangedWrapper } from "@/lib/firebase";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { guestAuth, type GuestUser } from "@/lib/guestAuth";
 
 export function useAuth() {
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(
-    localStorage.getItem('sessionId')
-  );
-  const queryClient = useQueryClient();
+  const [user, setUser] = useState<GuestUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Listen to auth state changes (Firebase or demo)
   useEffect(() => {
-    const unsubscribe = onAuthStateChangedWrapper((user) => {
-      setFirebaseUser(user);
-      if (!user) {
-        // User signed out, clear session
-        localStorage.removeItem('sessionId');
-        setSessionId(null);
-        queryClient.clear();
-      }
+    const unsubscribe = guestAuth.onUserChange((guestUser) => {
+      setUser(guestUser);
+      setIsLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [queryClient]);
+    return unsubscribe;
+  }, []);
 
-  // Login mutation to create server session
-  const loginMutation = useMutation({
-    mutationFn: async (user: User) => {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          user: {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-          },
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.sessionId) {
-        localStorage.setItem('sessionId', data.sessionId);
-        setSessionId(data.sessionId);
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      }
-    },
-  });
+  const setGuestUser = (name: string) => {
+    const newUser = guestAuth.setUser(name);
+    return newUser;
+  };
 
-  // Auto-login when Firebase user changes
-  useEffect(() => {
-    if (firebaseUser && !sessionId) {
-      loginMutation.mutate(firebaseUser);
-    }
-  }, [firebaseUser, sessionId]);
-
-  // Get user data from server
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-    enabled: !!sessionId,
-    queryFn: async () => {
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'x-session-id': sessionId || '',
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch user');
-      }
-      return response.json();
-    },
-  });
+  const logout = () => {
+    guestAuth.clearUser();
+  };
 
   return {
     user,
-    firebaseUser,
-    isLoading: isLoading || loginMutation.isPending,
-    isAuthenticated: !!firebaseUser && !!sessionId && !!user,
+    isLoading,
+    isAuthenticated: !!user,
+    setGuestUser,
+    logout,
   };
 }

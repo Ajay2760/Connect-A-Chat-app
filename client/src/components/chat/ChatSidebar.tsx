@@ -6,19 +6,12 @@ import { UserSearchDialog } from "./UserSearchDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { logOut } from "@/lib/firebase";
 
 export function ChatSidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      await logOut();
-      localStorage.removeItem('sessionId');
-      window.location.reload();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -52,14 +45,14 @@ export function ChatSidebar() {
       <div className="p-4 border-b border-border">
         <div className="flex items-center space-x-3">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
+            <AvatarImage src={user?.avatar || ""} alt={user?.name || ""} />
             <AvatarFallback>
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+              {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h3 className="font-medium text-foreground">
-              {user?.firstName} {user?.lastName}
+              {user?.name || 'Guest User'}
             </h3>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

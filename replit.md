@@ -16,14 +16,14 @@ Connect is a real-time chat application built with a React frontend, Express bac
 
 ### Backend Architecture
 - **Express.js** with TypeScript for the REST API server
-- **Firebase Authentication** with Google and Facebook social login
+- **Guest user system** without authentication requirements
 - **WebSocket Server** for real-time bidirectional communication
-- **Simple session management** with in-memory storage for easy deployment
+- **No authentication dependencies** for simplified deployment
 
 ### Data Storage
 - **In-memory storage** for simplified deployment without database dependencies
-- **Session storage** using memory-based solution for development and testing
-- **Firebase user management** for authentication and user profiles
+- **Guest user management** with automatic avatar generation
+- **No external authentication services** required
 
 ## Key Components
 
@@ -152,6 +152,12 @@ Changelog:
   * Replaced PostgreSQL with in-memory storage for easy deployment
   * Fixed deployment errors and removed database dependencies
   * Updated landing page with social media login buttons
+- June 19, 2025. Guest user system implementation:
+  * Removed all authentication requirements
+  * Implemented simple name-based user entry
+  * Added automatic avatar generation based on user names
+  * Simplified server architecture without authentication middleware
+  * Created deployment-ready application with zero dependencies
 ```
 
 ## User Preferences

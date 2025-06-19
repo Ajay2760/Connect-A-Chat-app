@@ -1,34 +1,24 @@
 import { MessageCircle, Users, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { signInWithGoogle, signInWithFacebook } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 export default function Landing() {
-  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const { setGuestUser } = useAuth();
 
-  const handleGoogleLogin = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      toast({
-        title: "Login Error",
-        description: "Failed to sign in with Google. Please try again.",
-        variant: "destructive",
-      });
+  const handleJoinChat = () => {
+    if (name.trim()) {
+      setGuestUser(name.trim());
     }
   };
 
-  const handleFacebookLogin = async () => {
-    try {
-      await signInWithFacebook();
-    } catch (error) {
-      toast({
-        title: "Login Error", 
-        description: "Failed to sign in with Facebook. Please try again.",
-        variant: "destructive",
-      });
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleJoinChat();
     }
   };
 
@@ -52,12 +42,22 @@ export default function Landing() {
             Experience real-time communication like never before. Chat instantly with friends, 
             share moments, and stay connected wherever you are.
           </p>
-          <div className="flex gap-4 justify-center">
-            <Button onClick={handleGoogleLogin} size="lg" className="text-lg px-8 py-3">
-              Sign in with Google
-            </Button>
-            <Button onClick={handleFacebookLogin} variant="outline" size="lg" className="text-lg px-8 py-3">
-              Sign in with Facebook
+          <div className="max-w-md mx-auto space-y-4">
+            <Input
+              type="text"
+              placeholder="Enter your name to start chatting"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="text-center text-lg py-3"
+            />
+            <Button 
+              onClick={handleJoinChat} 
+              size="lg" 
+              className="w-full text-lg py-3"
+              disabled={!name.trim()}
+            >
+              Start Chatting
             </Button>
           </div>
         </div>
@@ -111,12 +111,22 @@ export default function Landing() {
           <p className="text-lg text-muted-foreground mb-8">
             Join thousands of users already chatting on Connect
           </p>
-          <div className="flex gap-4 justify-center">
-            <Button onClick={handleGoogleLogin} size="lg" className="text-lg px-8 py-3">
-              Sign in with Google
-            </Button>
-            <Button onClick={handleFacebookLogin} variant="outline" size="lg" className="text-lg px-8 py-3">
-              Sign in with Facebook
+          <div className="max-w-md mx-auto space-y-4">
+            <Input
+              type="text"
+              placeholder="Enter your name to start chatting"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="text-center text-lg py-3"
+            />
+            <Button 
+              onClick={handleJoinChat} 
+              size="lg" 
+              className="w-full text-lg py-3"
+              disabled={!name.trim()}
+            >
+              Start Chatting
             </Button>
           </div>
         </div>
