@@ -1,10 +1,34 @@
 import { MessageCircle, Users, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { signInWithGoogle, signInWithFacebook } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const { toast } = useToast();
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      toast({
+        title: "Login Error",
+        description: "Failed to sign in with Google. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    try {
+      await signInWithFacebook();
+    } catch (error) {
+      toast({
+        title: "Login Error", 
+        description: "Failed to sign in with Facebook. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -22,9 +46,14 @@ export default function Landing() {
             Experience real-time communication like never before. Chat instantly with friends, 
             share moments, and stay connected wherever you are.
           </p>
-          <Button onClick={handleLogin} size="lg" className="text-lg px-8 py-3">
-            Get Started
-          </Button>
+          <div className="flex gap-4 justify-center">
+            <Button onClick={handleGoogleLogin} size="lg" className="text-lg px-8 py-3">
+              Sign in with Google
+            </Button>
+            <Button onClick={handleFacebookLogin} variant="outline" size="lg" className="text-lg px-8 py-3">
+              Sign in with Facebook
+            </Button>
+          </div>
         </div>
 
         {/* Features */}
@@ -76,9 +105,14 @@ export default function Landing() {
           <p className="text-lg text-muted-foreground mb-8">
             Join thousands of users already chatting on Connect
           </p>
-          <Button onClick={handleLogin} size="lg" variant="outline" className="text-lg px-8 py-3">
-            Sign In Now
-          </Button>
+          <div className="flex gap-4 justify-center">
+            <Button onClick={handleGoogleLogin} size="lg" className="text-lg px-8 py-3">
+              Sign in with Google
+            </Button>
+            <Button onClick={handleFacebookLogin} variant="outline" size="lg" className="text-lg px-8 py-3">
+              Sign in with Facebook
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./memStorage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { insertMessageSchema, insertConversationSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -20,8 +20,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const sessionUser = req.user;
+      if (!sessionUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Get or create user in storage
+      let user = await storage.getUser(sessionUser.uid);
+      if (!user) {
+        user = await storage.upsertUser({
+          id: sessionUser.uid,
+          email: sessionUser.email || null,
+          firstName: sessionUser.displayName?.split(' ')[0] || null,
+          lastName: sessionUser.displayName?.split(' ').slice(1).join(' ') || null,
+          profileImageUrl: sessionUser.photoURL || null,
+        });
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);

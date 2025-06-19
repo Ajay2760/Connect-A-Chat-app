@@ -82,7 +82,11 @@ export class MemoryStorage implements IStorage {
       
       const conversationMessages = Array.from(this.messages.values())
         .filter(msg => msg.conversationId === conversation.id)
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .sort((a, b) => {
+          const aTime = a.createdAt?.getTime() || 0;
+          const bTime = b.createdAt?.getTime() || 0;
+          return bTime - aTime;
+        })
         .slice(0, 1);
 
       result.push({

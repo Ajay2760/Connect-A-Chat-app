@@ -16,14 +16,14 @@ Connect is a real-time chat application built with a React frontend, Express bac
 
 ### Backend Architecture
 - **Express.js** with TypeScript for the REST API server
-- **Replit Authentication** with OpenID Connect for user management
+- **Firebase Authentication** with Google and Facebook social login
 - **WebSocket Server** for real-time bidirectional communication
-- **Session-based authentication** with PostgreSQL session storage
+- **Simple session management** with in-memory storage for easy deployment
 
 ### Data Storage
-- **PostgreSQL** database with connection pooling via Neon serverless
-- **Drizzle ORM** for type-safe database operations and schema management
-- **Session storage** using connect-pg-simple for authentication persistence
+- **In-memory storage** for simplified deployment without database dependencies
+- **Session storage** using memory-based solution for development and testing
+- **Firebase user management** for authentication and user profiles
 
 ## Key Components
 
@@ -121,10 +121,10 @@ Connect is a real-time chat application built with a React frontend, Express bac
 - **Responsive design** optimized for desktop and mobile
 
 ### Authentication & Security
-- **Secure authentication** via Replit OAuth with session management
+- **Firebase authentication** with Google and Facebook social login
 - **Protected routes** ensuring only authenticated users access chat
-- **User profile integration** with avatars and display names
-- **Automatic session refresh** for seamless user experience
+- **User profile integration** with avatars and display names from social accounts
+- **Simple session management** for easy deployment without database dependencies
 
 ### Interface Components
 - **Clean sidebar** with conversation list and user profile
@@ -146,6 +146,12 @@ Changelog:
   * Online presence tracking
   * Removed landing page preview section
   * Enhanced message input with emoji support
+- June 19, 2025. Deployment-ready improvements:
+  * Switched from Replit Auth to Firebase authentication
+  * Added Google and Facebook social login options
+  * Replaced PostgreSQL with in-memory storage for easy deployment
+  * Fixed deployment errors and removed database dependencies
+  * Updated landing page with social media login buttons
 ```
 
 ## User Preferences

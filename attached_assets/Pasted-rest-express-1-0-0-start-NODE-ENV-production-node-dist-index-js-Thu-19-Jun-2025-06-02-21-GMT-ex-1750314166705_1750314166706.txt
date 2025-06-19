@@ -1,0 +1,41 @@
+rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+Thu, 19 Jun 2025 06:02:21 GMT express-session deprecated req.secret; provide secret option at file:/opt/render/project/src/dist/index.js:262:10
+file:///opt/render/project/src/node_modules/openid-client/build/index.js:89
+    const err = new TypeError(message, { cause });
+                ^
+TypeError: "clientId" must be a non-empty string
+    at CodedTypeError (file:///opt/render/project/src/node_modules/openid-client/build/index.js:89:17)
+    at new Configuration (file:///opt/render/project/src/node_modules/openid-client/build/index.js:463:19)
+    at Module.discovery (file:///opt/render/project/src/node_modules/openid-client/build/index.js:244:22)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async memoize.maxAge (file:///opt/render/project/src/dist/index.js:246:12)
+    at async setupAuth (file:///opt/render/project/src/dist/index.js:294:18)
+    at async registerRoutes (file:///opt/render/project/src/dist/index.js:367:3)
+    at async file:///opt/render/project/src/dist/index.js:680:18 {
+  code: 'ERR_INVALID_ARG_TYPE',
+  [cause]: undefined
+}
+Node.js v22.16.0
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+Thu, 19 Jun 2025 06:02:40 GMT express-session deprecated req.secret; provide secret option at file:/opt/render/project/src/dist/index.js:262:10
+file:///opt/render/project/src/node_modules/openid-client/build/index.js:89
+    const err = new TypeError(message, { cause });
+                ^
+TypeError: "clientId" must be a non-empty string
+    at CodedTypeError (file:///opt/render/project/src/node_modules/openid-client/build/index.js:89:17)
+    at new Configuration (file:///opt/render/project/src/node_modules/openid-client/build/index.js:463:19)
+    at Module.discovery (file:///opt/render/project/src/node_modules/openid-client/build/index.js:244:22)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async memoize.maxAge (file:///opt/render/project/src/dist/index.js:246:12)
+    at async setupAuth (file:///opt/render/project/src/dist/index.js:294:18)
+    at async registerRoutes (file:///opt/render/project/src/dist/index.js:367:3)
+    at async file:///opt/render/project/src/dist/index.js:680:18 {
+  code: 'ERR_INVALID_ARG_TYPE',
+  [cause]: undefined
+}
+Node.js v22.16.0
