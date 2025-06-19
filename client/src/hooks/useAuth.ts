@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { type User } from "firebase/auth";
+import { onAuthStateChangedWrapper } from "@/lib/firebase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 
 export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -11,9 +10,9 @@ export function useAuth() {
   );
   const queryClient = useQueryClient();
 
-  // Listen to Firebase auth state changes
+  // Listen to auth state changes (Firebase or demo)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChangedWrapper((user) => {
       setFirebaseUser(user);
       if (!user) {
         // User signed out, clear session

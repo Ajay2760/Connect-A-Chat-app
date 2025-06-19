@@ -1,6 +1,7 @@
 import { MessageCircle, Users, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { signInWithGoogle, signInWithFacebook } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,6 +34,11 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-16">

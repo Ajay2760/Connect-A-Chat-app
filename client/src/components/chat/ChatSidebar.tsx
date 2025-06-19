@@ -6,12 +6,19 @@ import { UserSearchDialog } from "./UserSearchDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { logOut } from "@/lib/firebase";
 
 export function ChatSidebar() {
   const { user } = useAuth();
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await logOut();
+      localStorage.removeItem('sessionId');
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
