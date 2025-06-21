@@ -30,9 +30,8 @@ Edit
 💻 Installation
 
 1. Clone the repository
-
 ```bash
-git clone https://github.com/yourusername/connect-chat-app.git
+git clone https://github.com/Ajay2760/Connect
 cd connect-chat-app
 
 2. Start Backend
