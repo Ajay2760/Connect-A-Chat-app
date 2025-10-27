@@ -45,7 +45,9 @@ app.use((req, res, next) => {
   log("Connecting to MongoDB...");
   await connectDB();
 
-  const server = await registerRoutes(app);
+  // Create HTTP server (required before Socket.IO initialization)
+  const { createServer } = await import("http");
+  const server = createServer(app);
 
   // Initialize Socket.IO for real-time communication
   const io = new Server(server, {
@@ -56,6 +58,9 @@ app.use((req, res, next) => {
   });
 
   log("Socket.IO initialized");
+
+  // Register all routes and Socket.IO handlers
+  await registerRoutes(app, io);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
