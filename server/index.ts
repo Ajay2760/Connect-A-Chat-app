@@ -8,6 +8,7 @@ import { connectDB } from "./config/db";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser()); // Parse cookies for JWT authentication
 
 app.use((req, res, next) => {
   const start = Date.now();
