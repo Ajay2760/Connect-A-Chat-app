@@ -1,10 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
+import { Server } from "socket.io";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { connectDB } from "./config/db";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser()); // Parse cookies for JWT authentication
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,7 +41,26 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Connect to MongoDB database
+  log("Connecting to MongoDB...");
+  await connectDB();
+
+  // Create HTTP server (required before Socket.IO initialization)
+  const { createServer } = await import("http");
+  const server = createServer(app);
+
+  // Initialize Socket.IO for real-time communication
+  const io = new Server(server, {
+    cors: {
+      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      credentials: true,
+    },
+  });
+
+  log("Socket.IO initialized");
+
+  // Register all routes and Socket.IO handlers
+  await registerRoutes(app, io);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
