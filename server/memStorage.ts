@@ -30,7 +30,7 @@ export interface IStorage {
 }
 
 export class MemoryStorage implements IStorage {
-  private users = new Map<string, User>();
+  public users = new Map<string, User>(); // Made public for server to access
   private conversations = new Map<number, Conversation>();
   private messages = new Map<number, Message>();
   private nextConversationId = 1;

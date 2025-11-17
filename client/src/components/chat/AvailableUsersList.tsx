@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/hooks/useAuth";
+import { useSocket } from "@/hooks/useSocket";
 import { Users, UserPlus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@shared/schema";
@@ -11,6 +12,8 @@ import type { User } from "@shared/schema";
 export function AvailableUsersList() {
   const { user: currentUser } = useAuth();
   const { startConversation, conversations, setActiveConversationId } = useChat();
+  const { subscribe } = useSocket();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch all users (or search if query exists)
@@ -33,6 +36,43 @@ export function AvailableUsersList() {
       return response.json();
     },
   });
+
+  // Listen for real-time user list updates from WebSocket
+  useEffect(() => {
+    const unsubscribe = subscribe("userList", (data: { users: User[] }) => {
+      if (data.users && Array.isArray(data.users)) {
+        // Filter out current user and apply search if needed
+        let filteredUsers = data.users.filter(u => u.id !== currentUser?.id);
+        
+        if (searchQuery) {
+          const searchTerm = searchQuery.toLowerCase();
+          filteredUsers = filteredUsers.filter(user =>
+            user.firstName?.toLowerCase().includes(searchTerm) ||
+            user.lastName?.toLowerCase().includes(searchTerm) ||
+            user.email?.toLowerCase().includes(searchTerm)
+          );
+        }
+        
+        // Update the query cache with the new user list
+        queryClient.setQueryData(
+          ["/api/users", searchQuery, currentUser?.id],
+          filteredUsers
+        );
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe, queryClient, currentUser?.id, searchQuery]);
+
+  // Also listen for individual user status changes
+  useEffect(() => {
+    const unsubscribe = subscribe("userStatus", (data: { userId: string; isOnline: boolean }) => {
+      // Invalidate query to refetch with updated online status
+      queryClient.invalidateQueries({ queryKey: ["/api/users", searchQuery, currentUser?.id] });
+    });
+
+    return unsubscribe;
+  }, [subscribe, queryClient, currentUser?.id, searchQuery]);
 
   const handleStartConversation = async (user: User) => {
     // Check if conversation already exists

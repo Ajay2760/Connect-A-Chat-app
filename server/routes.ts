@@ -258,7 +258,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (message.userId) {
               connectedClients.set(message.userId, { ws, userId: message.userId });
               await storage.updateUserOnlineStatus(message.userId, true);
+              
+              // Send the current user list to the newly connected client
+              await sendUserListToClient(ws);
+              
+              // Broadcast the updated user status to all other clients
               broadcastUserStatus(message.userId, true);
+              
+              // Broadcast the full list of connected users to all clients
+              await broadcastUserList();
             }
             break;
             
@@ -278,6 +286,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           connectedClients.delete(userId);
           await storage.updateUserOnlineStatus(userId, false);
           broadcastUserStatus(userId, false);
+          
+          // Broadcast the updated user list after someone disconnects
+          await broadcastUserList();
           break;
         }
       }
@@ -325,6 +336,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         client.ws.send(statusData);
       }
     });
+  }
+
+  async function sendUserListToClient(ws: WebSocket) {
+    try {
+      // Get all users from storage
+      const allUsers = Array.from(storage['users'].values());
+      
+      // Create a map of online users from connectedClients
+      const onlineUserIds = new Set(connectedClients.keys());
+      
+      // Update online status for all users
+      const usersWithStatus = allUsers.map(user => ({
+        ...user,
+        isOnline: onlineUserIds.has(user.id),
+      }));
+
+      const userListData = JSON.stringify({
+        type: 'userList',
+        users: usersWithStatus,
+      });
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(userListData);
+        console.log(`Sent user list to new client. Total users: ${usersWithStatus.length}`);
+      }
+    } catch (error) {
+      console.error('Error sending user list to client:', error);
+    }
+  }
+
+  async function broadcastUserList() {
+    try {
+      // Get all users from storage (they should all be registered)
+      const allUsers = Array.from(storage['users'].values());
+      
+      // Create a map of online users from connectedClients
+      const onlineUserIds = new Set(connectedClients.keys());
+      
+      // Update online status for all users
+      const usersWithStatus = allUsers.map(user => ({
+        ...user,
+        isOnline: onlineUserIds.has(user.id),
+      }));
+
+      const userListData = JSON.stringify({
+        type: 'userList',
+        users: usersWithStatus,
+      });
+
+      // Broadcast to all connected clients
+      connectedClients.forEach((client) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(userListData);
+        }
+      });
+
+      console.log(`Broadcasted user list to ${connectedClients.size} clients. Total users: ${usersWithStatus.length}`);
+    } catch (error) {
+      console.error('Error broadcasting user list:', error);
+    }
   }
 
   return httpServer;
