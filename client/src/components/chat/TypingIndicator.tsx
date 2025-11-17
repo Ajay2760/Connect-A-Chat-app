@@ -19,10 +19,9 @@ export function TypingIndicator() {
 
   if (!activeConversationId) return null;
 
-  const conversationTypingUsers = typingUsers.get(activeConversationId);
-  if (!conversationTypingUsers || conversationTypingUsers.size === 0) return null;
+  if (!typingUsers || typingUsers.size === 0) return null;
 
-  const typingUsersList = Array.from(conversationTypingUsers);
+  const typingUsersList = Array.from(typingUsers);
   
   let typingText = "";
   if (typingUsersList.length === 1) {

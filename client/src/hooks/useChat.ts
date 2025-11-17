@@ -14,8 +14,20 @@ export function useChat() {
 
   // Get conversations
   const { data: conversations, isLoading: conversationsLoading } = useQuery<Conversation[]>({
-    queryKey: ["/api/conversations"],
+    queryKey: ["/api/conversations", user?.id],
     enabled: !!user,
+    queryFn: async () => {
+      const url = new URL("/api/conversations", window.location.origin);
+      url.searchParams.set("userId", user!.id);
+      const res = await fetch(url.toString(), {
+        credentials: "include",
+        headers: {
+          "x-user-id": user!.id,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch conversations");
+      return res.json();
+    },
   });
 
   // Get messages for active conversation
@@ -34,31 +46,43 @@ export function useChat() {
       fileName?: string;
       fileSize?: number;
     }) => {
-      const response = await apiRequest("POST", `/api/conversations/${data.conversationId}/messages`, {
-        content: data.content,
-        messageType: data.messageType || "text",
-        fileUrl: data.fileUrl,
-        fileName: data.fileName,
-        fileSize: data.fileSize,
-      });
+      const response = await apiRequest(
+        "POST", 
+        `/api/conversations/${data.conversationId}/messages`, 
+        {
+          content: data.content,
+          messageType: data.messageType || "text",
+          fileUrl: data.fileUrl,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          senderId: user?.id,
+        },
+        user?.id
+      );
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", user?.id] });
     },
   });
 
   // Create conversation mutation
   const createConversationMutation = useMutation({
     mutationFn: async (participantId: string) => {
-      const response = await apiRequest("POST", "/api/conversations", {
-        participant2Id: participantId,
-      });
+      const response = await apiRequest(
+        "POST", 
+        "/api/conversations", 
+        {
+          participant1Id: user?.id,
+          participant2Id: participantId,
+        },
+        user?.id
+      );
       return response.json();
     },
     onSuccess: (newConversation) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", user?.id] });
       setActiveConversationId(newConversation.id);
     },
   });
@@ -66,10 +90,15 @@ export function useChat() {
   // Mark messages as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (conversationId: number) => {
-      await apiRequest("PATCH", `/api/conversations/${conversationId}/read`);
+      await apiRequest(
+        "PATCH", 
+        `/api/conversations/${conversationId}/read`,
+        { userId: user?.id },
+        user?.id
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", user?.id] });
     },
   });
 
@@ -78,7 +107,7 @@ export function useChat() {
     const unsubscribeMessage = subscribe("message", (data) => {
       const { conversationId } = data;
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", conversationId, "messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", user?.id] });
     });
 
     const unsubscribeTyping = subscribe("typing", (data) => {
@@ -141,12 +170,17 @@ export function useChat() {
 
   const addReaction = useCallback(async (messageId: number, emoji: string) => {
     try {
-      await apiRequest("POST", `/api/messages/${messageId}/reactions`, { emoji });
+      await apiRequest(
+        "POST", 
+        `/api/messages/${messageId}/reactions`, 
+        { emoji, userId: user?.id },
+        user?.id
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
     } catch (error) {
       console.error("Error adding reaction:", error);
     }
-  }, [activeConversationId, queryClient]);
+  }, [activeConversationId, queryClient, user?.id]);
 
   return {
     conversations,

@@ -109,9 +109,9 @@ export function MessageList() {
             
             {isOwnMessage && (
               <Avatar className="w-8 h-8">
-                <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
+                <AvatarImage src={user?.avatar || ""} alt={user?.name || ""} />
                 <AvatarFallback>
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
             )}

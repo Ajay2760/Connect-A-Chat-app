@@ -16,10 +16,18 @@ export function UserSearchDialog() {
   const { user: currentUser } = useAuth();
 
   const { data: searchResults, isLoading } = useQuery<User[]>({
-    queryKey: ["/api/users/search", searchQuery],
-    enabled: !!searchQuery && searchQuery.length > 2,
+    queryKey: ["/api/users/search", searchQuery, currentUser?.id],
+    enabled: !!searchQuery && searchQuery.length > 2 && !!currentUser,
     queryFn: async () => {
-      const response = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`);
+      const url = new URL("/api/users/search", window.location.origin);
+      url.searchParams.set("q", searchQuery);
+      url.searchParams.set("userId", currentUser!.id);
+      const response = await fetch(url.toString(), {
+        credentials: "include",
+        headers: {
+          "x-user-id": currentUser!.id,
+        },
+      });
       if (!response.ok) throw new Error("Failed to search users");
       return response.json();
     },

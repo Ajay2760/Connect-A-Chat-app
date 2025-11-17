@@ -11,10 +11,21 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  userId?: string | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {};
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -26,11 +37,29 @@ export async function apiRequest(
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
+  userId?: string;
 }) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+  ({ on401: unauthorizedBehavior, userId }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    let url = queryKey[0] as string;
+    const headers: Record<string, string> = {};
+    
+    if (userId) {
+      headers["x-user-id"] = userId;
+      // Also add to query string for GET requests
+      try {
+        const urlObj = new URL(url, window.location.origin);
+        urlObj.searchParams.set("userId", userId);
+        url = urlObj.pathname + urlObj.search;
+      } catch {
+        // If URL construction fails, just use the original URL
+        // The header will still be sent
+      }
+    }
+    
+    const res = await fetch(url, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
@@ -55,3 +84,8 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Helper to get query function with user ID
+export const getQueryFnWithUserId = (userId: string) => {
+  return getQueryFn({ on401: "throw", userId });
+};

@@ -45,12 +45,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users/search', async (req: any, res) => {
     try {
       const { q } = req.query;
+      const currentUserId = req.query.userId || req.headers['x-user-id'] || 'guest';
       
       if (!q || typeof q !== 'string') {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      const users = await storage.searchUsers(q, 'guest');
+      const users = await storage.searchUsers(q, currentUserId);
       res.json(users);
     } catch (error) {
       console.error("Error searching users:", error);
@@ -61,8 +62,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Conversation routes
   app.get('/api/conversations', async (req: any, res) => {
     try {
-      // Return empty conversations for guest mode
-      res.json([]);
+      // Get user ID from query parameter or header
+      const userId = req.query.userId || req.headers['x-user-id'];
+      
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const conversations = await storage.getConversations(userId);
+      res.json(conversations);
     } catch (error) {
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
@@ -71,10 +79,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/conversations', async (req: any, res) => {
     try {
+      // Get user ID from body or header
+      const userId = req.body.participant1Id || req.headers['x-user-id'];
+      
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
       const validatedData = insertConversationSchema.parse(req.body);
       
       const conversation = await storage.getOrCreateConversation(
-        'guest',
+        userId,
         validatedData.participant2Id
       );
       
@@ -112,15 +127,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid conversation ID" });
       }
 
+      // Get user ID from body or header
+      const userId = req.body.senderId || req.headers['x-user-id'];
+      
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
       const validatedData = insertMessageSchema.parse({
         ...req.body,
         conversationId,
+        senderId: userId,
       });
 
       const message = await storage.createMessage(validatedData);
       
       // Broadcast message to connected clients
-      broadcastMessage(conversationId, message, validatedData.senderId);
+      broadcastMessage(conversationId, message, userId);
       
       res.json(message);
     } catch (error) {
@@ -132,10 +155,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/conversations/:id/read', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/conversations/:id/read', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.body.userId || req.headers['x-user-id'];
       const conversationId = parseInt(req.params.id);
+      
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       if (isNaN(conversationId)) {
         return res.status(400).json({ message: "Invalid conversation ID" });
@@ -154,10 +181,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const messageId = parseInt(req.params.id);
       const { emoji } = req.body;
-      const userId = req.session?.user?.id || 'guest';
+      const userId = req.body.userId || req.headers['x-user-id'];
 
       if (isNaN(messageId) || !emoji) {
         return res.status(400).json({ message: "Invalid message ID or emoji" });
+      }
+
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ message: "User ID is required" });
       }
 
       await storage.addMessageReaction(messageId, userId, emoji);
@@ -172,10 +203,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const messageId = parseInt(req.params.id);
       const { emoji } = req.body;
-      const userId = req.session?.user?.id || 'guest';
+      const userId = req.body.userId || req.headers['x-user-id'];
 
       if (isNaN(messageId) || !emoji) {
         return res.status(400).json({ message: "Invalid message ID or emoji" });
+      }
+
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({ message: "User ID is required" });
       }
 
       await storage.removeMessageReaction(messageId, userId, emoji);
