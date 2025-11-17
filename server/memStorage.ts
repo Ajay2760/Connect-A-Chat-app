@@ -217,14 +217,22 @@ export class MemoryStorage implements IStorage {
 
   async searchUsers(query: string, currentUserId: string): Promise<User[]> {
     const searchTerm = query.toLowerCase();
-    return Array.from(this.users.values())
+    const allUsers = Array.from(this.users.values())
+      .filter(user => user.id !== currentUserId);
+    
+    if (!query || query.trim() === '') {
+      // Return all users if no search query
+      return allUsers;
+    }
+    
+    // Filter by search term
+    return allUsers
       .filter(user => 
-        user.id !== currentUserId &&
-        (user.firstName?.toLowerCase().includes(searchTerm) ||
-         user.lastName?.toLowerCase().includes(searchTerm) ||
-         user.email?.toLowerCase().includes(searchTerm))
+        user.firstName?.toLowerCase().includes(searchTerm) ||
+        user.lastName?.toLowerCase().includes(searchTerm) ||
+        user.email?.toLowerCase().includes(searchTerm)
       )
-      .slice(0, 10);
+      .slice(0, 50);
   }
 }
 

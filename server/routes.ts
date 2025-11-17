@@ -42,6 +42,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User routes
+  app.get('/api/users', async (req: any, res) => {
+    try {
+      const currentUserId = req.query.userId || req.headers['x-user-id'] || 'guest';
+      const { q } = req.query;
+      
+      if (q && typeof q === 'string') {
+        // Search users
+        const users = await storage.searchUsers(q, currentUserId);
+        res.json(users);
+      } else {
+        // Get all users (excluding current user)
+        const allUsers = await storage.searchUsers('', currentUserId);
+        res.json(allUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   app.get('/api/users/search', async (req: any, res) => {
     try {
       const { q } = req.query;
