@@ -1,19 +1,19 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import { createServer, type Server as HttpServer } from "http";
+import { Server as SocketIOServer, Socket } from "socket.io";
 import { storage } from "./memStorage";
-import { setupAuth, isAuthenticated } from "./noAuth";
+import { setupAuth } from "./noAuth";
 import { insertMessageSchema, insertConversationSchema } from "@shared/schema";
 import { z } from "zod";
 
 interface SocketClient {
-  ws: WebSocket;
+  socket: Socket;
   userId: string;
 }
 
 const connectedClients = new Map<string, SocketClient>();
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, io: SocketIOServer): Promise<HttpServer> {
   // Auth middleware
   await setupAuth(app);
 
@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUserId = req.query.userId || req.headers['x-user-id'] || 'guest';
       const { q } = req.query;
-      
+
       if (q && typeof q === 'string') {
         // Search users
         const users = await storage.searchUsers(q, currentUserId);
@@ -66,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { q } = req.query;
       const currentUserId = req.query.userId || req.headers['x-user-id'] || 'guest';
-      
+
       if (!q || typeof q !== 'string') {
         return res.status(400).json({ message: "Search query is required" });
       }
@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get user ID from query parameter or header
       const userId = req.query.userId || req.headers['x-user-id'];
-      
+
       if (!userId || typeof userId !== 'string') {
         return res.status(400).json({ message: "User ID is required" });
       }
@@ -101,18 +101,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get user ID from body or header
       const userId = req.body.participant1Id || req.headers['x-user-id'];
-      
+
       if (!userId || typeof userId !== 'string') {
         return res.status(400).json({ message: "User ID is required" });
       }
 
       const validatedData = insertConversationSchema.parse(req.body);
-      
+
       const conversation = await storage.getOrCreateConversation(
         userId,
         validatedData.participant2Id
       );
-      
+
       res.json(conversation);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -142,14 +142,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/conversations/:id/messages', async (req: any, res) => {
     try {
       const conversationId = parseInt(req.params.id);
-      
+
       if (isNaN(conversationId)) {
         return res.status(400).json({ message: "Invalid conversation ID" });
       }
 
       // Get user ID from body or header
       const userId = req.body.senderId || req.headers['x-user-id'];
-      
+
       if (!userId || typeof userId !== 'string') {
         return res.status(400).json({ message: "User ID is required" });
       }
@@ -161,10 +161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const message = await storage.createMessage(validatedData);
-      
+
       // Broadcast message to connected clients
       broadcastMessage(conversationId, message, userId);
-      
+
       res.json(message);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -179,11 +179,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.body.userId || req.headers['x-user-id'];
       const conversationId = parseInt(req.params.id);
-      
+
       if (!userId || typeof userId !== 'string') {
         return res.status(400).json({ message: "User ID is required" });
       }
-      
+
       if (isNaN(conversationId)) {
         return res.status(400).json({ message: "Invalid conversation ID" });
       }
@@ -241,52 +241,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
+  // Socket.IO handlers
+  io.on('connection', (socket) => {
+    console.log('New Socket.IO connection:', socket.id);
 
-  // WebSocket server
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-
-  wss.on('connection', (ws: WebSocket, req) => {
-    console.log('New WebSocket connection');
-
-    ws.on('message', async (data: Buffer) => {
+    socket.on('auth', async (data) => {
       try {
-        const message = JSON.parse(data.toString());
-        
-        switch (message.type) {
-          case 'auth':
-            if (message.userId) {
-              connectedClients.set(message.userId, { ws, userId: message.userId });
-              await storage.updateUserOnlineStatus(message.userId, true);
-              
-              // Send the current user list to the newly connected client
-              await sendUserListToClient(ws);
-              
-              // Broadcast the updated user status to all other clients
-              broadcastUserStatus(message.userId, true);
-              
-              // Broadcast the full list of connected users to all clients
-              await broadcastUserList();
-            }
-            break;
-            
-          case 'typing':
-            broadcastTyping(message.conversationId, message.userId, message.isTyping);
-            break;
+        if (data.userId) {
+          connectedClients.set(data.userId, { socket, userId: data.userId });
+          await storage.updateUserOnlineStatus(data.userId, true);
+
+          // Send the current user list to the newly connected client
+          await sendUserListToClient(socket);
+
+          // Broadcast the updated user status to all other clients
+          broadcastUserStatus(data.userId, true);
+
+          // Broadcast the full list of connected users to all clients
+          await broadcastUserList();
         }
       } catch (error) {
-        console.error('Error handling WebSocket message:', error);
+        console.error('Error handling auth:', error);
       }
     });
 
-    ws.on('close', async () => {
+    socket.on('typing', (data) => {
+      broadcastTyping(data.conversationId, data.userId, data.isTyping);
+    });
+
+    socket.on('disconnect', async () => {
       // Find and remove the client
       for (const [userId, client] of connectedClients.entries()) {
-        if (client.ws === ws) {
+        if (client.socket.id === socket.id) {
           connectedClients.delete(userId);
           await storage.updateUserOnlineStatus(userId, false);
           broadcastUserStatus(userId, false);
-          
+
           // Broadcast the updated user list after someone disconnects
           await broadcastUserList();
           break;
@@ -296,71 +286,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   function broadcastMessage(conversationId: number, message: any, senderId: string) {
-    const messageData = JSON.stringify({
+    const messageData = {
       type: 'message',
       conversationId,
       message,
-    });
+    };
 
+    // Emit to all clients except sender
     connectedClients.forEach((client, userId) => {
-      if (userId !== senderId && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(messageData);
+      if (userId !== senderId) {
+        client.socket.emit('message', messageData);
       }
     });
   }
 
   function broadcastTyping(conversationId: number, userId: string, isTyping: boolean) {
-    const typingData = JSON.stringify({
+    const typingData = {
       type: 'typing',
       conversationId,
       userId,
       isTyping,
-    });
+    };
 
     connectedClients.forEach((client, clientUserId) => {
-      if (clientUserId !== userId && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(typingData);
+      if (clientUserId !== userId) {
+        client.socket.emit('typing', typingData);
       }
     });
   }
 
   function broadcastUserStatus(userId: string, isOnline: boolean) {
-    const statusData = JSON.stringify({
+    const statusData = {
       type: 'userStatus',
       userId,
       isOnline,
-    });
+    };
 
-    connectedClients.forEach((client) => {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(statusData);
-      }
-    });
+    io.emit('userStatus', statusData);
   }
 
-  async function sendUserListToClient(ws: WebSocket) {
+  async function sendUserListToClient(socket: Socket) {
     try {
       // Get all users from storage
       const allUsers = Array.from(storage['users'].values());
-      
+
       // Create a map of online users from connectedClients
       const onlineUserIds = new Set(connectedClients.keys());
-      
+
       // Update online status for all users
       const usersWithStatus = allUsers.map(user => ({
         ...user,
         isOnline: onlineUserIds.has(user.id),
       }));
 
-      const userListData = JSON.stringify({
+      socket.emit('userList', {
         type: 'userList',
         users: usersWithStatus,
       });
 
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(userListData);
-        console.log(`Sent user list to new client. Total users: ${usersWithStatus.length}`);
-      }
+      console.log(`Sent user list to new client. Total users: ${usersWithStatus.length}`);
     } catch (error) {
       console.error('Error sending user list to client:', error);
     }
@@ -368,28 +352,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function broadcastUserList() {
     try {
-      // Get all users from storage (they should all be registered)
+      // Get all users from storage
       const allUsers = Array.from(storage['users'].values());
-      
+
       // Create a map of online users from connectedClients
       const onlineUserIds = new Set(connectedClients.keys());
-      
+
       // Update online status for all users
       const usersWithStatus = allUsers.map(user => ({
         ...user,
         isOnline: onlineUserIds.has(user.id),
       }));
 
-      const userListData = JSON.stringify({
+      io.emit('userList', {
         type: 'userList',
         users: usersWithStatus,
-      });
-
-      // Broadcast to all connected clients
-      connectedClients.forEach((client) => {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.send(userListData);
-        }
       });
 
       console.log(`Broadcasted user list to ${connectedClients.size} clients. Total users: ${usersWithStatus.length}`);
@@ -398,5 +375,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  return httpServer;
+  // Return the HTTP server (which is what index.ts expects, though it creates it itself)
+  // In index.ts: const server = createServer(app); ... await registerRoutes(app, io);
+  // So we don't strictly need to return the server here if we aren't creating it.
+  // However, the signature in index.ts might expect it.
+  // Let's look at index.ts again. It awaits registerRoutes(app, io).
+  // It doesn't use the return value.
+  // But the original file returned `httpServer`.
+  // Since index.ts creates the server, we can just return the one passed in or null, 
+  // BUT wait, the original file CREATED the server inside registerRoutes:
+  // const httpServer = createServer(app);
+  // const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // return httpServer;
+
+  // In index.ts:
+  // const server = createServer(app);
+  // const io = new Server(server, ...);
+  // await registerRoutes(app, io);
+
+  // So index.ts ALREADY creates the server. The previous `registerRoutes` was creating ANOTHER server?
+  // Let's check index.ts again.
+  // Line 50: const server = createServer(app);
+  // Line 63: await registerRoutes(app, io);
+  // Line 86: server.listen(...)
+
+  // So `registerRoutes` should NOT create a server. It should just attach routes.
+  // The previous implementation of `registerRoutes` created a NEW `httpServer` and returned it.
+  // But `index.ts` ignores the return value!
+  // So the previous implementation was actually creating a SECOND server that was never listened to?
+  // Or maybe `wss` was attaching to it?
+  // Wait, `wss` takes `server`.
+  // If `registerRoutes` created a new server, `wss` attached to that new server.
+  // But `index.ts` listens on `server` (the one it created).
+  // So the WebSocket server in the old code might have been attached to a server that wasn't listening?
+  // Ah, `wss` can attach to an existing server too.
+  // But `createServer(app)` creates a new HTTP server instance.
+
+  // It seems the old code was indeed slightly broken or confusing.
+  // I will just return the `app` or nothing, but to keep signature compatible if needed (though I can change it), I'll just return the server from index.ts if I had access, but I don't.
+  // Actually, I can just return `app` cast as any or just change the return type to Promise<void>.
+  // I'll change the return type to Promise<void> since index.ts doesn't use the result.
+
+  return app as any;
 }

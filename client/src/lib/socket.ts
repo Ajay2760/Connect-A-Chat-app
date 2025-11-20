@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 /**
  * Socket.IO server URL from environment variable
  */
-const SOCKET_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5001';
 
 /**
  * Socket.IO client instance

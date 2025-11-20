@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
+import { socket } from "../lib/socket";
 
 export interface SocketMessage {
   type: string;
@@ -8,65 +9,82 @@ export interface SocketMessage {
 
 export function useSocket() {
   const { user, isAuthenticated } = useAuth();
-  const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
-  const messageHandlers = useRef<Map<string, (data: any) => void>>(new Map());
+  const [isConnected, setIsConnected] = useState(socket.connected);
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
-
-    socket.onopen = () => {
+    function onConnect() {
       setIsConnected(true);
+      console.log("Socket connected");
+
       // Authenticate with the server
-      socket.send(JSON.stringify({
-        type: 'auth',
-        userId: user.id,
-      }));
-    };
+      socket.emit('auth', { userId: user?.id });
+    }
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const handler = messageHandlers.current.get(data.type);
-        if (handler) {
-          handler(data);
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-      }
-    };
-
-    socket.onclose = () => {
+    function onDisconnect() {
       setIsConnected(false);
-    };
+      console.log("Socket disconnected");
+    }
 
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setIsConnected(false);
-    };
+    // Connect if not already connected
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    // If already connected, authenticate immediately
+    if (socket.connected) {
+      onConnect();
+    }
 
     return () => {
-      socket.close();
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      // We don't necessarily want to disconnect on unmount if we want to keep the connection alive across pages,
+      // but for now let's leave it managed by the app state or explicit disconnects.
+      // socket.disconnect(); 
     };
   }, [isAuthenticated, user]);
 
   const sendMessage = (message: SocketMessage) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(message));
+    if (socket.connected) {
+      // For Socket.IO, we usually emit specific events, but to keep compatibility with the existing
+      // message structure (type: 'typing', etc.), we can emit them as events or a generic 'message' event.
+      // The server expects specific events for 'typing' and 'auth', but 'message' is handled differently?
+      // Let's look at server: 
+      // socket.on('typing', ...)
+      // socket.on('auth', ...)
+      // But for chat messages? 
+      // The server has: app.post('/api/conversations/:id/messages') -> broadcastMessage
+      // So chat messages are sent via HTTP POST, and received via socket event 'message'.
+
+      // The client `sendMessage` seems to be used for typing indicators or other realtime signals?
+      // In the old code: socket.send(JSON.stringify(message));
+      // And server: ws.on('message', ... switch(message.type) ... case 'typing' ...)
+
+      // So if message.type is 'typing', we should emit 'typing'.
+      if (message.type === 'typing') {
+        socket.emit('typing', message);
+      } else {
+        // Fallback or other types
+        console.warn("Unknown message type for socket:", message.type);
+      }
     }
   };
 
   const subscribe = (type: string, handler: (data: any) => void) => {
-    messageHandlers.current.set(type, handler);
-    
+    // Map generic types to specific socket events if needed
+    // The server emits: 'message', 'typing', 'userStatus', 'userList'
+
+    const eventName = type; // In this case they match
+
+    socket.on(eventName, handler);
+
     return () => {
-      messageHandlers.current.delete(type);
+      socket.off(eventName, handler);
     };
   };
 
